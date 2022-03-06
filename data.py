@@ -1,7 +1,7 @@
 from fileinput import filename
 import os
 import math
-import json
+import json5
 import pickle
 import hashlib
 from typing import Tuple
@@ -21,8 +21,7 @@ def get_words_from_source(file, signature):
         text = "".join(fp.readlines())
     i_sign = text.find(signature)
     if i_sign < 0:
-        print("signature word not found!")
-        exit(1)
+        raise "signature word not found!"
 
     level = 1
     i_l_bracket = i_sign - 1
@@ -103,7 +102,7 @@ def generate_word_list_with_entropy(word_list, alter_pinyin_list=None):
                                for i in range(len(word_list))]
 
     with tqdm(total=len(word_list)) as pbar:
-        with ProcessPoolExecutor(max_workers=8) as exec:
+        with ProcessPoolExecutor(max_workers=4) as exec:
             future_list = [exec.submit(
                 average_info_entropy, composite_word_list[i], composite_word_list, word_list[i]) for i in range(len(word_list))]
 
@@ -177,6 +176,19 @@ def reload_words_entropy_from_index(index_file):
     return wordlist_with_ent
 
 
+def reload_words_entropy_from_word_list(word_list):
+    serial_pinyin = create_serialized_pinyin_list(word_list)
+    wordlist_with_ent = generate_word_list_with_entropy(
+        word_list, serial_pinyin)
+
+    if not os.path.exists(data_dir):
+        os.makedirs(data_dir)
+
+    with open(words_with_entropy_file, "wb+") as fp:
+        fp.write(pickle.dumps(wordlist_with_ent))
+    return wordlist_with_ent
+
+
 def read_words_with_entropy(file: str):
     with open(file, "rb") as fp:
         return pickle.loads(fp.read())
@@ -202,11 +214,14 @@ if __name__ == "__main__":
 
     r = requests.get(url)
 
-    re_index = re.compile(
-        r'src="(/assets/(index\.[0-9a-f]+\.js))"')
+    re_idioms = re.compile(
+        r'="(/assets/(idioms\.[0-9a-f]+\.js))"')
 
     re_vendor = re.compile(
-        r'href="(/assets/(vendor\.[0-9a-f]+\.js))"')
+        r'="(/assets/(vendor\.[0-9a-f]+\.js))"')
+
+    re_polyphone = re.compile(
+        r'="(/assets/(polyphones\.[0-9a-f]+\.js))"')
 
     def update_source(url, filepath, expect_name) -> Tuple[bool, str]:
         expected_file = glob.glob(os.path.join(data_dir, expect_name))
@@ -234,8 +249,11 @@ if __name__ == "__main__":
         _filepath = os.path.join(data_dir, _matches[2])
         return update_source(_url, _filepath, expect)
 
-    index_updated, index_file = update_with_regex_filter(
-        re_index, url, r.text, "index.*.js")
+    idioms_updated, idioms_file = update_with_regex_filter(
+        re_idioms, url, r.text, "idioms.*.js")
+
+    polyphones_updated, polyphones_file = update_with_regex_filter(
+        re_polyphone, url, r.text, "polyphones.*.js")
 
     vendor_updated, vendor_file = update_with_regex_filter(
         re_vendor, url, r.text, "vendor.*.js")
@@ -246,6 +264,28 @@ if __name__ == "__main__":
 
     pinyin.load_pinyin_file()
 
-    if index_updated or not os.path.exists(words_with_entropy_file):
+    if idioms_updated or polyphones_updated or not os.path.exists(words_with_entropy_file):
+        with open(idioms_file, "r", encoding="utf-8") as fp:
+            text = "".join(fp.readlines())
+            l_backquote = text.find("`")
+            r_backquote = text.find("`", l_backquote+1)
+            idiom_list = json5.loads(
+                "[\"" + "\",\"".join(text[l_backquote+1:r_backquote].split()) + "\"]")
+
+        with open(polyphones_file, "r", encoding="utf-8") as fp:
+            text = "".join(fp.readlines())
+            l_backquote = text.find("`")
+            l_brace = text.find("{")
+            r_brace = text.find("}", l_brace)
+            polyphones_map = json5.loads(text[l_brace: r_brace+1])
+
+        word_list = []
+        for w in idiom_list:
+            word_list.append([w, [pinyin.get_pinyin(c) for c in w]])
+
+        for w in polyphones_map:
+            word_list.append([w, [pinyin.split_initial_simple_tone(
+                cp) for cp in polyphones_map[w]]])
+
         print("更新词库数据...")
-        reload_words_entropy_from_index(index_file)
+        reload_words_entropy_from_word_list(word_list)
