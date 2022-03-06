@@ -14,6 +14,9 @@ data_dir = os.path.join(os.getcwd(), "data")
 words_with_entropy_file = os.path.join(
     data_dir, "words_with_entropy.pickle")
 
+words_file = os.path.join(
+    data_dir, "words.pickle")
+
 
 def get_words_from_source(file, signature):
     text = ""
@@ -52,18 +55,17 @@ def get_words_from_source(file, signature):
             i_r_bracket += 1
 
     word_list_str = text[i_l_bracket:i_r_bracket+1]
-    return json.loads(word_list_str)
+    return json5.loads(word_list_str)
 
 
-def set_word_list(file, src):
-    first_line = True
-    with open(file, "w+", encoding="utf8") as fp:
-        for w in src:
-            if first_line:
-                first_line = False
-            else:
-                fp.write("\n")
-            fp.write(w)
+def set_word_list(word_list):
+    with open(words_file, "wb+") as fp:
+        fp.write(pickle.dumps(word_list))
+
+
+def get_word_list():
+    with open(words_file, "rb") as fp:
+        return pickle.loads(fp.read())
 
 
 def guess_vs_possibles(guess, word_list):
@@ -264,7 +266,7 @@ if __name__ == "__main__":
 
     pinyin.load_pinyin_file()
 
-    if idioms_updated or polyphones_updated or not os.path.exists(words_with_entropy_file):
+    if idioms_updated or polyphones_updated or not os.path.exists(words_file):
         with open(idioms_file, "r", encoding="utf-8") as fp:
             text = "".join(fp.readlines())
             l_backquote = text.find("`")
@@ -280,12 +282,18 @@ if __name__ == "__main__":
             polyphones_map = json5.loads(text[l_brace: r_brace+1])
 
         word_list = []
+        for w in polyphones_map:
+            k = polyphones_map[w]
+            word_list.append([w, [pinyin.split_initial_simple_tone(
+                cp) for cp in k.split()]])
+
         for w in idiom_list:
             word_list.append([w, [pinyin.get_pinyin(c) for c in w]])
 
-        for w in polyphones_map:
-            word_list.append([w, [pinyin.split_initial_simple_tone(
-                cp) for cp in polyphones_map[w]]])
+        set_word_list(word_list)
+
+    if not os.path.exists(words_with_entropy_file):
+        word_list = get_word_list()
 
         print("更新词库数据...")
         reload_words_entropy_from_word_list(word_list)
