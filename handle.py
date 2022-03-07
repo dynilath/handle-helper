@@ -1,5 +1,6 @@
 import pattern
 import data
+import pinyin
 
 
 def print_first5(src):
@@ -21,6 +22,8 @@ def filter_by_pattern(patt, guess, guess_pinyin, possible_with_weight_list):
 if __name__ == "__main__":
     possible_with_weight = data.get_words_with_entropy()
 
+    pinyin.load_pinyin_file()
+
     word_to_pinyin_map = {}
     for w in possible_with_weight:
         word_to_pinyin_map.setdefault(w[0][0], w[0][1])
@@ -37,18 +40,14 @@ if __name__ == "__main__":
     while True:
         print_first5(possible_with_weight)
 
-        if len(possible_with_weight) < 5:
+        if len(possible_with_weight) < 2:
             break
 
-        while True:
-            print("")
-            a = input("输入四字词语，以及匹配结果：\n")
+        # while True:
+        print("")
+        a = input("输入四字词语，以及匹配结果：\n")
 
-            _guess, _word_result, _initial_result, _simple_result, _tone_result = a.split()
-
-            guess = _guess[0:4]
-            if _guess in word_to_pinyin_map:
-                break
+        _guess, _word_result, _initial_result, _simple_result, _tone_result = a.split()
 
         pats = [pattern.number_str_to_pattern(_word_result),
                 pattern.number_str_to_pattern(_initial_result),
@@ -61,7 +60,10 @@ if __name__ == "__main__":
             pat += p
 
         guess = _guess[0:4]
-        guess_pinyin = word_to_pinyin_map.get(guess)
+        if not guess in word_to_pinyin_map:
+            guess_pinyin = data.default_pinyin(guess)
+        else:
+            guess_pinyin = word_to_pinyin_map.get(guess)
 
         print("输入词语：%s" % guess)
         print("拼音数据：%s" % guess_pinyin)
