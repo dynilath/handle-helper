@@ -266,7 +266,10 @@ if __name__ == "__main__":
 
     pinyin.load_pinyin_file()
 
+    word_list_updated = False
+
     if idioms_updated or polyphones_updated or not os.path.exists(words_file):
+        print("更新词库数据...")
         with open(idioms_file, "r", encoding="utf-8") as fp:
             text = "".join(fp.readlines())
             l_backquote = text.find("`")
@@ -292,8 +295,10 @@ if __name__ == "__main__":
 
         set_word_list(word_list)
 
-    if not os.path.exists(words_with_entropy_file):
+        word_list_updated = True
+
+    if word_list_updated or not os.path.exists(words_with_entropy_file):
         word_list = get_word_list()
 
-        print("更新词库数据...")
+        print("更新词语筛选缓存...")
         reload_words_entropy_from_word_list(word_list)
