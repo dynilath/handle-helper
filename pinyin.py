@@ -13,11 +13,18 @@ def split_initial_simple_tone(src: str) -> Tuple[str, str, str]:
     i = 0
     while i < len(src) and not "aeiouv".find(src[i]) >= 0:
         i += 1
-
+    initial = src[0:i]
     if "1234".find(src[-1]) >= 0:
-        return (src[0:i], src[i:-1], src[-1:])
+        simple = src[i:-1]
+        tone = src[-1:]
     else:
-        return (src[0:i], src[i:], "")
+        simple = src[i:]
+        tone = ""
+
+    if "jqxyw".find(initial) >= 0 and simple == "u":
+        simple = "v"
+
+    return (initial, simple, tone)
 
 
 def reload_pinyin_from_vendor(vendor_file):
