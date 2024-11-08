@@ -11,6 +11,9 @@ import pattern
 
 data_dir = os.path.join(os.getcwd(), "data")
 
+if not os.path.exists(data_dir) and os.path.isdir(data_dir):
+    os.makedirs(data_dir)
+
 words_with_entropy_file = os.path.join(
     data_dir, "words_with_entropy.pickle")
 
