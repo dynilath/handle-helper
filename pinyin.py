@@ -32,7 +32,7 @@ def reload_pinyin_from_vendor(vendor_file):
     from tqdm import tqdm
     from pypinyin.contrib.tone_convert import to_tone3
 
-    signature = "\\u0101:\"\\u5416\\u9515\\u9312\""
+    signature = "ā:\"吖锕錒\""
     text = ""
     with open(vendor_file, "r", encoding="utf-8") as fp:
         text = "".join(fp.readlines())
@@ -40,13 +40,14 @@ def reload_pinyin_from_vendor(vendor_file):
     i_sign = text.find(signature)
 
     if i_sign < 0:
-        print("signature word not found!")
+        print("signature word not found! file:" +
+              vendor_file + " signature:" + signature)
         exit(1)
 
     i_r_brace = text.find("}", i_sign)
     i_l_brace = text.rfind("{", 0, i_sign)
 
-    #print(text[i_l_brace: i_r_brace + 1])
+    # print(text[i_l_brace: i_r_brace + 1])
 
     _raw_map = json5.loads(text[i_l_brace: i_r_brace + 1])
 

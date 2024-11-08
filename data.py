@@ -24,7 +24,7 @@ def get_words_from_source(file, signature):
         text = "".join(fp.readlines())
     i_sign = text.find(signature)
     if i_sign < 0:
-        raise "signature word not found!"
+        raise "signature word not found! file:" + file + " signature:" + signature
 
     level = 1
     i_l_bracket = i_sign - 1
@@ -207,23 +207,23 @@ def default_pinyin(word):
 
 if __name__ == "__main__":
 
-    import requests
+    from pypac import PACSession
     import re
-    from xpinyin import Pinyin
     import glob
 
     url = "https://handle.antfu.me/"
 
-    r = requests.get(url)
+    session = PACSession()
+    r = session.get(url)
 
     re_idioms = re.compile(
-        r'="(/assets/(idioms\.[0-9a-f]+\.js))"')
+        r'="(\/assets\/(idioms.[0-9a-f]+\.js))"')
 
     re_vendor = re.compile(
-        r'="(/assets/(vendor\.[0-9a-f]+\.js))"')
+        r'="(\/assets\/(vendor.[0-9a-f]+\.js))"')
 
     re_polyphone = re.compile(
-        r'="(/assets/(polyphones\.[0-9a-f]+\.js))"')
+        r'="(\/assets\/(polyphones.[0-9a-f]+\.js))"')
 
     def update_source(url, filepath, expect_name) -> Tuple[bool, str]:
         expected_file = glob.glob(os.path.join(data_dir, expect_name))
@@ -240,7 +240,7 @@ if __name__ == "__main__":
         if founded:
             return (not founded), filepath
 
-        r = requests.get(url)
+        r = session.get(url)
         with open(filepath, "w+", encoding="utf-8") as fp:
             fp.write(r.text)
         return (not founded), filepath
